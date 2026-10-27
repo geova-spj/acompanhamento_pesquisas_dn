@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Acompanhamento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background-color: #0d3c61; }
+        .navbar-brand { color: #ffffff !important; font-weight: bold; }
+        .card-kpi { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .kpi-title { font-size: 0.8rem; color: #6c757d; font-weight: 700; text-transform: uppercase; }
+        .kpi-value { font-size: 1.6rem; font-weight: 700; color: #0d3c61; }
+        .nav-tabs .nav-link.active { font-weight: bold; border-bottom: 3px solid #0d3c61; color: #0d3c61; }
+        .progress { height: 16px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; }
+        .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+        .tr-total { background-color: #e9ecef; font-weight: bold; border-top: 2px solid #0d3c61; }
+        .badge-update { background-color: #17a2b8; color: white; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg mb-4">
+    <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+        <span class="navbar-brand">📊 Painel de Acompanhamento do Campo</span>
+        <span class="badge-update" id="badgeUpdate">🕒 Última Atualização: 27/10/2026 às 12:32:18</span>
+    </div>
+</nav>
+
+<div class="container-fluid px-4">
+
+    <!-- Filtro de Cenário Amostral Global -->
+    <div class="card p-3 mb-4 shadow-sm border-0">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <label for="selectCenario" class="fw-bold text-dark me-2">🎯 Selecione o Cenário de Meta Amostral (Aderência SENAI e SESI):</label>
+            </div>
+            <div class="col-md-7">
+                <select id="selectCenario" class="form-select fw-semibold border-primary">
+                    <option value="c1" selected>Cenário Base: 85% Confiança, 8% Erro, 70% Proporção</option>
+                    <option value="c2">Cenário Alternativo: 85% Confiança, 8% Erro, 90% Proporção</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARDS DE VISÃO GERAL -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white">
+                <div class="kpi-title">SENAI Geral</div>
+                <div class="kpi-value" id="cardSenaiGeralVal">-</div>
+                <div class="progress mt-2"><div id="cardSenaiGeralProg" class="progress-bar bg-primary" style="width: 0%">0%</div></div>
+                <div class="text-muted small mt-1" id="cardSenaiGeralSub">Universo Total: -</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white">
+                <div class="kpi-title">SENAI Aderência (EP)</div>
+                <div class="kpi-value" id="cardSenaiAdVal">-</div>
+                <div class="progress mt-2"><div id="cardSenaiAdProg" class="progress-bar bg-info text-dark" style="width: 0%">0%</div></div>
+                <div class="text-muted small mt-1" id="cardSenaiAdSub">Universo Total: -</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white">
+                <div class="kpi-title">SESI Geral</div>
+                <div class="kpi-value" id="cardSesiGeralVal">-</div>
+                <div class="progress mt-2"><div id="cardSesiGeralProg" class="progress-bar bg-success" style="width: 0%">0%</div></div>
+                <div class="text-muted small mt-1" id="cardSesiGeralSub">Universo Total: -</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-kpi p-3 bg-white">
+                <div class="kpi-title">Imagem (Realizado Total)</div>
+                <div class="kpi-value" id="cardImagemVal">-</div>
+                <div class="text-muted small mt-1">Pesquisa de Imagem</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABAS -->
+    <ul class="nav nav-tabs mb-4" id="pesquisaTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="senai-tab" data-bs-toggle="tab" data-bs-target="#senai-pane" type="button">🏢 SENAI</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="sesi-tab" data-bs-toggle="tab" data-bs-target="#sesi-pane" type="button">🏥 SESI</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="imagem-tab" data-bs-toggle="tab" data-bs-target="#imagem-pane" type="button">🗺️ Imagem</button>
+        </li>
+        <li class="nav-item"><button class="nav-link" id="monit-tab" data-bs-toggle="tab" data-bs-target="#monit-pane" type="button">👥 Monitoramento de Pesquisadores & Campo</button></li>
+    </ul>
+
+    <div class="tab-content" id="pesquisaTabsContent">
+        
+        <!-- SENAI -->
+        <div class="tab-pane fade show active" id="senai-pane">
+            <div class="card p-3 shadow-sm border-0 mb-4">
+                <h6 class="card-title fw-bold text-secondary">Atingimento por DR - SENAI</h6>
+                <canvas id="chartSenaiDR" style="max-height: 320px;"></canvas>
+            </div>
+            <div class="table-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Detalhamento por DR - SENAI</h5>
+                    <input type="text" id="searchSenai" class="form-control w-25" placeholder="Filtrar por DR...">
+                </div>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>DR</th>
+                            <th>Universo Geral</th>
+                            <th>Meta Amostral (Geral)</th>
+                            <th>Realizado Geral</th>
+                            <th>% Realizado (Geral)</th>
+                            <th>Universo Aderência</th>
+                            <th>Meta Amostral (EP)</th>
+                            <th>Realizado Aderência (EP)</th>
+                            <th>% Realizado (EP)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodySenai"></tbody>
+                    <tfoot id="tfootSenai"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- SESI -->
+        <div class="tab-pane fade" id="sesi-pane">
+            <div class="card p-3 shadow-sm border-0 mb-4">
+                <h6 class="card-title fw-bold text-secondary">Atingimento por DR - SESI</h6>
+                <canvas id="chartSesiDR" style="max-height: 320px;"></canvas>
+            </div>
+            <div class="table-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Detalhamento por DR - SESI</h5>
+                    <input type="text" id="searchSesi" class="form-control w-25" placeholder="Filtrar por DR...">
+                </div>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>DR</th>
+                            <th>Universo Geral</th>
+                            <th>Meta Amostral</th>
+                            <th>Realizado Geral</th>
+                            <th>% Realizado / Meta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodySesi"></tbody>
+                    <tfoot id="tfootSesi"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- IMAGEM -->
+        <div class="tab-pane fade" id="imagem-pane">
+            <div class="table-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Acompanhamento da Pesquisa de Imagem por UF (Estratificada)</h5>
+                    <button class="btn btn-outline-primary btn-sm fw-bold" id="btnToggleVisImagem">🔄 Alternar Modo: % Farol Gradativo</button>
+                </div>
+                <table class="table table-hover align-middle text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th rowspan="2" class="align-middle">UF</th>
+                            <th colspan="2">Sexo</th>
+                            <th colspan="5">Faixa Etária</th>
+                            <th colspan="4">Escolaridade</th>
+                            <th rowspan="2" class="align-middle">Total Realizado</th>
+                        </tr>
+                        <tr>
+                            <th>Masc</th><th>Fem</th>
+                            <th>18 a 24</th><th>25 a 34</th><th>35 a 44</th><th>45 a 59</th><th>60 anos ou mais</th>
+                            <th>Sem instrução e fundamental incompleto</th><th>Fundamental completo e médio incompleto</th><th>Médio completo e superior incompleto</th><th>Superior completo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyImagem"></tbody>
+                    <tfoot id="tfootImagem"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        
+        <div class="tab-pane fade" id="monit-pane">
+            <div class="card p-3 shadow-sm border-0 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label for="selectPesquisaMonit" class="fw-bold text-dark me-2">🔍 Selecione a Pesquisa:</label>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="selectPesquisaMonit" class="form-select fw-semibold border-primary">
+                            <option value="senai" selected>SENAI - Aderência & Satisfação</option>
+                            <option value="sesi">SESI - Aderência & Satisfação</option>
+                            <option value="imagem">Imagem - Pesquisa de Imagem</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card card-kpi p-3 bg-white border-start border-4 border-primary">
+                        <div class="kpi-title">Média de Realização por Dia</div>
+                        <div class="kpi-value text-primary" id="cardMediaDia">-</div>
+                        <span class="text-muted small mt-1">Entrevistas / Dias em campo</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card p-3 shadow-sm border-0">
+                        <h6 class="card-title fw-bold text-secondary">Evolução Diária de Pesquisas Realizadas (Ordem Cronológica)</h6>
+                        <canvas id="chartEvolucaoMonit" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card p-3 shadow-sm border-0">
+                        <h6 class="card-title fw-bold text-secondary">Produção por Pesquisador (Top Entrevistas)</h6>
+                        <canvas id="chartPesquisadoresMonit" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h5 class="fw-bold mb-3">Detalhamento da Equipe de Pesquisadores</h5>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Pesquisador</th>
+                            <th>Entrevistas Realizadas</th>
+                            <th>% do Total da Pesquisa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyMonitPesquisadores"></tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const dataSenai = [{"DR": "AC", "UNIVERSO_SATISFA\u00c7\u00c3O": 82, "UNIVERSO_ADER\u00caNCIA": 32, "realizado_geral": 1, "realizado_aderencia": 0, "meta_c1_geral": 38, "meta_c2_geral": 22, "meta_c1_ad": 22, "meta_c2_ad": 16}, {"DR": "AL", "UNIVERSO_SATISFA\u00c7\u00c3O": 286, "UNIVERSO_ADER\u00caNCIA": 136, "realizado_geral": 2, "realizado_aderencia": 2, "meta_c1_geral": 56, "meta_c2_geral": 27, "meta_c1_ad": 46, "meta_c2_ad": 25}, {"DR": "AM", "UNIVERSO_SATISFA\u00c7\u00c3O": 167, "UNIVERSO_ADER\u00caNCIA": 143, "realizado_geral": 4, "realizado_aderencia": 4, "meta_c1_geral": 49, "meta_c2_geral": 25, "meta_c1_ad": 47, "meta_c2_ad": 25}, {"DR": "AP", "UNIVERSO_SATISFA\u00c7\u00c3O": 52, "UNIVERSO_ADER\u00caNCIA": 45, "realizado_geral": 0, "realizado_aderencia": 0, "meta_c1_geral": 30, "meta_c2_geral": 19, "meta_c1_ad": 28, "meta_c2_ad": 18}, {"DR": "BA", "UNIVERSO_SATISFA\u00c7\u00c3O": 903, "UNIVERSO_ADER\u00caNCIA": 656, "realizado_geral": 37, "realizado_aderencia": 33, "meta_c1_geral": 64, "meta_c2_geral": 29, "meta_c1_ad": 62, "meta_c2_ad": 28}, {"DR": "CE", "UNIVERSO_SATISFA\u00c7\u00c3O": 546, "UNIVERSO_ADER\u00caNCIA": 218, "realizado_geral": 2, "realizado_aderencia": 1, "meta_c1_geral": 61, "meta_c2_geral": 28, "meta_c1_ad": 53, "meta_c2_ad": 26}, {"DR": "DF", "UNIVERSO_SATISFA\u00c7\u00c3O": 354, "UNIVERSO_ADER\u00caNCIA": 211, "realizado_geral": 5, "realizado_aderencia": 2, "meta_c1_geral": 58, "meta_c2_geral": 27, "meta_c1_ad": 52, "meta_c2_ad": 26}, {"DR": "ES", "UNIVERSO_SATISFA\u00c7\u00c3O": 416, "UNIVERSO_ADER\u00caNCIA": 290, "realizado_geral": 26, "realizado_aderencia": 23, "meta_c1_geral": 59, "meta_c2_geral": 28, "meta_c1_ad": 56, "meta_c2_ad": 27}, {"DR": "GO", "UNIVERSO_SATISFA\u00c7\u00c3O": 630, "UNIVERSO_ADER\u00caNCIA": 254, "realizado_geral": 0, "realizado_aderencia": 0, "meta_c1_geral": 62, "meta_c2_geral": 28, "meta_c1_ad": 54, "meta_c2_ad": 27}, {"DR": "MA", "UNIVERSO_SATISFA\u00c7\u00c3O": 277, "UNIVERSO_ADER\u00caNCIA": 185, "realizado_geral": 3, "realizado_aderencia": 1, "meta_c1_geral": 55, "meta_c2_geral": 27, "meta_c1_ad": 50, "meta_c2_ad": 26}, {"DR": "MG", "UNIVERSO_SATISFA\u00c7\u00c3O": 2374, "UNIVERSO_ADER\u00caNCIA": 1501, "realizado_geral": 6, "realizado_aderencia": 5, "meta_c1_geral": 67, "meta_c2_geral": 29, "meta_c1_ad": 66, "meta_c2_ad": 29}, {"DR": "MS", "UNIVERSO_SATISFA\u00c7\u00c3O": 370, "UNIVERSO_ADER\u00caNCIA": 126, "realizado_geral": 1, "realizado_aderencia": 1, "meta_c1_geral": 58, "meta_c2_geral": 28, "meta_c1_ad": 45, "meta_c2_ad": 24}, {"DR": "MT", "UNIVERSO_SATISFA\u00c7\u00c3O": 382, "UNIVERSO_ADER\u00caNCIA": 296, "realizado_geral": 4, "realizado_aderencia": 4, "meta_c1_geral": 58, "meta_c2_geral": 28, "meta_c1_ad": 56, "meta_c2_ad": 27}, {"DR": "PA", "UNIVERSO_SATISFA\u00c7\u00c3O": 232, "UNIVERSO_ADER\u00caNCIA": 180, "realizado_geral": 1, "realizado_aderencia": 1, "meta_c1_geral": 53, "meta_c2_geral": 26, "meta_c1_ad": 50, "meta_c2_ad": 26}, {"DR": "PB", "UNIVERSO_SATISFA\u00c7\u00c3O": 376, "UNIVERSO_ADER\u00caNCIA": 100, "realizado_geral": 13, "realizado_aderencia": 6, "meta_c1_geral": 58, "meta_c2_geral": 28, "meta_c1_ad": 41, "meta_c2_ad": 23}, {"DR": "PE", "UNIVERSO_SATISFA\u00c7\u00c3O": 726, "UNIVERSO_ADER\u00caNCIA": 401, "realizado_geral": 110, "realizado_aderencia": 79, "meta_c1_geral": 63, "meta_c2_geral": 29, "meta_c1_ad": 59, "meta_c2_ad": 28}, {"DR": "PI", "UNIVERSO_SATISFA\u00c7\u00c3O": 224, "UNIVERSO_ADER\u00caNCIA": 177, "realizado_geral": 8, "realizado_aderencia": 5, "meta_c1_geral": 53, "meta_c2_geral": 26, "meta_c1_ad": 50, "meta_c2_ad": 26}, {"DR": "PR", "UNIVERSO_SATISFA\u00c7\u00c3O": 1642, "UNIVERSO_ADER\u00caNCIA": 939, "realizado_geral": 3, "realizado_aderencia": 3, "meta_c1_geral": 66, "meta_c2_geral": 29, "meta_c1_ad": 64, "meta_c2_ad": 29}, {"DR": "QT", "UNIVERSO_SATISFA\u00c7\u00c3O": 244, "UNIVERSO_ADER\u00caNCIA": 0, "realizado_geral": 0, "realizado_aderencia": 0, "meta_c1_geral": 54, "meta_c2_geral": 27, "meta_c1_ad": 0, "meta_c2_ad": 0}, {"DR": "RJ", "UNIVERSO_SATISFA\u00c7\u00c3O": 485, "UNIVERSO_ADER\u00caNCIA": 210, "realizado_geral": 5, "realizado_aderencia": 5, "meta_c1_geral": 60, "meta_c2_geral": 28, "meta_c1_ad": 52, "meta_c2_ad": 26}, {"DR": "RN", "UNIVERSO_SATISFA\u00c7\u00c3O": 225, "UNIVERSO_ADER\u00caNCIA": 81, "realizado_geral": 2, "realizado_aderencia": 2, "meta_c1_geral": 53, "meta_c2_geral": 26, "meta_c1_ad": 38, "meta_c2_ad": 22}, {"DR": "RO", "UNIVERSO_SATISFA\u00c7\u00c3O": 125, "UNIVERSO_ADER\u00caNCIA": 97, "realizado_geral": 1, "realizado_aderencia": 1, "meta_c1_geral": 45, "meta_c2_geral": 24, "meta_c1_ad": 41, "meta_c2_ad": 23}, {"DR": "RR", "UNIVERSO_SATISFA\u00c7\u00c3O": 46, "UNIVERSO_ADER\u00caNCIA": 33, "realizado_geral": 1, "realizado_aderencia": 0, "meta_c1_geral": 28, "meta_c2_geral": 19, "meta_c1_ad": 23, "meta_c2_ad": 16}, {"DR": "RS", "UNIVERSO_SATISFA\u00c7\u00c3O": 2867, "UNIVERSO_ADER\u00caNCIA": 1872, "realizado_geral": 23, "realizado_aderencia": 18, "meta_c1_geral": 67, "meta_c2_geral": 29, "meta_c1_ad": 66, "meta_c2_ad": 29}, {"DR": "SC", "UNIVERSO_SATISFA\u00c7\u00c3O": 2364, "UNIVERSO_ADER\u00caNCIA": 1065, "realizado_geral": 7, "realizado_aderencia": 3, "meta_c1_geral": 67, "meta_c2_geral": 29, "meta_c1_ad": 64, "meta_c2_ad": 29}, {"DR": "SE", "UNIVERSO_SATISFA\u00c7\u00c3O": 125, "UNIVERSO_ADER\u00caNCIA": 97, "realizado_geral": 19, "realizado_aderencia": 16, "meta_c1_geral": 45, "meta_c2_geral": 24, "meta_c1_ad": 41, "meta_c2_ad": 23}, {"DR": "SP", "UNIVERSO_SATISFA\u00c7\u00c3O": 9241, "UNIVERSO_ADER\u00caNCIA": 3606, "realizado_geral": 18, "realizado_aderencia": 11, "meta_c1_geral": 68, "meta_c2_geral": 30, "meta_c1_ad": 67, "meta_c2_ad": 29}, {"DR": "TO", "UNIVERSO_SATISFA\u00c7\u00c3O": 131, "UNIVERSO_ADER\u00caNCIA": 51, "realizado_geral": 6, "realizado_aderencia": 6, "meta_c1_geral": 45, "meta_c2_geral": 24, "meta_c1_ad": 30, "meta_c2_ad": 19}];
+    const dataSesi = [{"DR": "AC", "UNIVERSO": 153, "realizado_geral": 0, "meta_c1_geral": 48, "meta_c2_geral": 25}, {"DR": "AL", "UNIVERSO": 118, "realizado_geral": 0, "meta_c1_geral": 44, "meta_c2_geral": 24}, {"DR": "AM", "UNIVERSO": 106, "realizado_geral": 2, "meta_c1_geral": 42, "meta_c2_geral": 24}, {"DR": "AP", "UNIVERSO": 55, "realizado_geral": 0, "meta_c1_geral": 31, "meta_c2_geral": 20}, {"DR": "BA", "UNIVERSO": 942, "realizado_geral": 13, "meta_c1_geral": 64, "meta_c2_geral": 29}, {"DR": "CE", "UNIVERSO": 397, "realizado_geral": 3, "meta_c1_geral": 59, "meta_c2_geral": 28}, {"DR": "DF", "UNIVERSO": 87, "realizado_geral": 6, "meta_c1_geral": 39, "meta_c2_geral": 23}, {"DR": "ES", "UNIVERSO": 838, "realizado_geral": 0, "meta_c1_geral": 63, "meta_c2_geral": 29}, {"DR": "GO", "UNIVERSO": 347, "realizado_geral": 16, "meta_c1_geral": 57, "meta_c2_geral": 27}, {"DR": "MA", "UNIVERSO": 276, "realizado_geral": 1, "meta_c1_geral": 55, "meta_c2_geral": 27}, {"DR": "MG", "UNIVERSO": 653, "realizado_geral": 10, "meta_c1_geral": 62, "meta_c2_geral": 28}, {"DR": "MS", "UNIVERSO": 158, "realizado_geral": 3, "meta_c1_geral": 48, "meta_c2_geral": 25}, {"DR": "MT", "UNIVERSO": 254, "realizado_geral": 2, "meta_c1_geral": 54, "meta_c2_geral": 27}, {"DR": "PA", "UNIVERSO": 78, "realizado_geral": 0, "meta_c1_geral": 37, "meta_c2_geral": 22}, {"DR": "PB", "UNIVERSO": 340, "realizado_geral": 2, "meta_c1_geral": 57, "meta_c2_geral": 27}, {"DR": "PE", "UNIVERSO": 664, "realizado_geral": 18, "meta_c1_geral": 62, "meta_c2_geral": 28}, {"DR": "PI", "UNIVERSO": 83, "realizado_geral": 0, "meta_c1_geral": 38, "meta_c2_geral": 22}, {"DR": "PR", "UNIVERSO": 2024, "realizado_geral": 22, "meta_c1_geral": 66, "meta_c2_geral": 29}, {"DR": "RJ", "UNIVERSO": 578, "realizado_geral": 8, "meta_c1_geral": 61, "meta_c2_geral": 28}, {"DR": "RN", "UNIVERSO": 596, "realizado_geral": 2, "meta_c1_geral": 62, "meta_c2_geral": 28}, {"DR": "RO", "UNIVERSO": 116, "realizado_geral": 1, "meta_c1_geral": 44, "meta_c2_geral": 24}, {"DR": "RR", "UNIVERSO": 94, "realizado_geral": 2, "meta_c1_geral": 40, "meta_c2_geral": 23}, {"DR": "RS", "UNIVERSO": 1349, "realizado_geral": 1, "meta_c1_geral": 65, "meta_c2_geral": 29}, {"DR": "SC", "UNIVERSO": 2461, "realizado_geral": 25, "meta_c1_geral": 67, "meta_c2_geral": 29}, {"DR": "SE", "UNIVERSO": 18, "realizado_geral": 2, "meta_c1_geral": 15, "meta_c2_geral": 12}, {"DR": "SP", "UNIVERSO": 996, "realizado_geral": 2, "meta_c1_geral": 64, "meta_c2_geral": 29}, {"DR": "TO", "UNIVERSO": 88, "realizado_geral": 1, "meta_c1_geral": 39, "meta_c2_geral": 23}];
+    const dataImagem = [{"UF": "AC", "MASCULINO": 80, "FEMININO": 81, "18 a 24": 31, "25 a 34": 38, "35 a 44": 35, "45 a 59": 34, "60 anos ou mais": 22, "Sem instru\u00e7\u00e3o e fundamental incompleto": 60, "Fundamental completo e m\u00e9dio incompleto": 26, "M\u00e9dio completo e superior incompleto": 52, "Superior completo": 24, "r_masc": 1.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 1.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "AL", "MASCULINO": 75, "FEMININO": 86, "18 a 24": 26, "25 a 34": 34, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 29, "Sem instru\u00e7\u00e3o e fundamental incompleto": 70, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 48, "Superior completo": 19, "r_masc": 1.0, "r_fem": 2.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 2.0, "r_45_59": 1.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 1.0, "r_medio": 0.0, "r_sup": 2.0, "total_realizado": 3.0}, {"UF": "AM", "MASCULINO": 79, "FEMININO": 82, "18 a 24": 31, "25 a 34": 38, "35 a 44": 35, "45 a 59": 35, "60 anos ou mais": 22, "Sem instru\u00e7\u00e3o e fundamental incompleto": 48, "Fundamental completo e m\u00e9dio incompleto": 27, "M\u00e9dio completo e superior incompleto": 65, "Superior completo": 21, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "AP", "MASCULINO": 79, "FEMININO": 82, "18 a 24": 31, "25 a 34": 40, "35 a 44": 35, "45 a 59": 34, "60 anos ou mais": 20, "Sem instru\u00e7\u00e3o e fundamental incompleto": 46, "Fundamental completo e m\u00e9dio incompleto": 25, "M\u00e9dio completo e superior incompleto": 61, "Superior completo": 29, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "BA", "MASCULINO": 76, "FEMININO": 85, "18 a 24": 23, "25 a 34": 31, "35 a 44": 35, "45 a 59": 39, "60 anos ou mais": 33, "Sem instru\u00e7\u00e3o e fundamental incompleto": 65, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 55, "Superior completo": 17, "r_masc": 2.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 1.0, "r_45_59": 1.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 2.0, "r_sup": 0.0, "total_realizado": 2.0}, {"UF": "CE", "MASCULINO": 76, "FEMININO": 85, "18 a 24": 23, "25 a 34": 35, "35 a 44": 33, "45 a 59": 38, "60 anos ou mais": 31, "Sem instru\u00e7\u00e3o e fundamental incompleto": 62, "Fundamental completo e m\u00e9dio incompleto": 25, "M\u00e9dio completo e superior incompleto": 56, "Superior completo": 19, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "DF", "MASCULINO": 75, "FEMININO": 86, "18 a 24": 23, "25 a 34": 33, "35 a 44": 37, "45 a 59": 40, "60 anos ou mais": 27, "Sem instru\u00e7\u00e3o e fundamental incompleto": 28, "Fundamental completo e m\u00e9dio incompleto": 19, "M\u00e9dio completo e superior incompleto": 60, "Superior completo": 53, "r_masc": 2.0, "r_fem": 2.0, "r_18_24": 0.0, "r_25_34": 1.0, "r_35_44": 1.0, "r_45_59": 2.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 2.0, "r_sup": 2.0, "total_realizado": 4.0}, {"UF": "ES", "MASCULINO": 77, "FEMININO": 84, "18 a 24": 21, "25 a 34": 31, "35 a 44": 34, "45 a 59": 40, "60 anos ou mais": 35, "Sem instru\u00e7\u00e3o e fundamental incompleto": 52, "Fundamental completo e m\u00e9dio incompleto": 25, "M\u00e9dio completo e superior incompleto": 58, "Superior completo": 27, "r_masc": 0.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "GO", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 23, "25 a 34": 34, "35 a 44": 35, "45 a 59": 40, "60 anos ou mais": 29, "Sem instru\u00e7\u00e3o e fundamental incompleto": 51, "Fundamental completo e m\u00e9dio incompleto": 26, "M\u00e9dio completo e superior incompleto": 58, "Superior completo": 27, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "MA", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 27, "25 a 34": 35, "35 a 44": 35, "45 a 59": 35, "60 anos ou mais": 28, "Sem instru\u00e7\u00e3o e fundamental incompleto": 65, "Fundamental completo e m\u00e9dio incompleto": 26, "M\u00e9dio completo e superior incompleto": 54, "Superior completo": 16, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "MG", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 21, "25 a 34": 31, "35 a 44": 32, "45 a 59": 40, "60 anos ou mais": 37, "Sem instru\u00e7\u00e3o e fundamental incompleto": 56, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 55, "Superior completo": 26, "r_masc": 0.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 1.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 1.0, "r_sup": 0.0, "total_realizado": 1.0}, {"UF": "MS", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 23, "25 a 34": 34, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 31, "Sem instru\u00e7\u00e3o e fundamental incompleto": 55, "Fundamental completo e m\u00e9dio incompleto": 27, "M\u00e9dio completo e superior incompleto": 51, "Superior completo": 29, "r_masc": 1.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 1.0, "r_sup": 0.0, "total_realizado": 1.0}, {"UF": "MT", "MASCULINO": 81, "FEMININO": 80, "18 a 24": 24, "25 a 34": 36, "35 a 44": 36, "45 a 59": 39, "60 anos ou mais": 26, "Sem instru\u00e7\u00e3o e fundamental incompleto": 52, "Fundamental completo e m\u00e9dio incompleto": 28, "M\u00e9dio completo e superior incompleto": 54, "Superior completo": 27, "r_masc": 2.0, "r_fem": 2.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 3.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 2.0, "r_sup": 2.0, "total_realizado": 4.0}, {"UF": "PA", "MASCULINO": 80, "FEMININO": 81, "18 a 24": 28, "25 a 34": 37, "35 a 44": 36, "45 a 59": 36, "60 anos ou mais": 25, "Sem instru\u00e7\u00e3o e fundamental incompleto": 62, "Fundamental completo e m\u00e9dio incompleto": 29, "M\u00e9dio completo e superior incompleto": 53, "Superior completo": 17, "r_masc": 0.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 1.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "PB", "MASCULINO": 76, "FEMININO": 85, "18 a 24": 23, "25 a 34": 32, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 33, "Sem instru\u00e7\u00e3o e fundamental incompleto": 69, "Fundamental completo e m\u00e9dio incompleto": 22, "M\u00e9dio completo e superior incompleto": 49, "Superior completo": 21, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "PE", "MASCULINO": 75, "FEMININO": 86, "18 a 24": 24, "25 a 34": 33, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 32, "Sem instru\u00e7\u00e3o e fundamental incompleto": 62, "Fundamental completo e m\u00e9dio incompleto": 22, "M\u00e9dio completo e superior incompleto": 57, "Superior completo": 20, "r_masc": 1.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 1.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "PI", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 24, "25 a 34": 32, "35 a 44": 34, "45 a 59": 38, "60 anos ou mais": 33, "Sem instru\u00e7\u00e3o e fundamental incompleto": 71, "Fundamental completo e m\u00e9dio incompleto": 23, "M\u00e9dio completo e superior incompleto": 47, "Superior completo": 20, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "PR", "MASCULINO": 77, "FEMININO": 84, "18 a 24": 21, "25 a 34": 32, "35 a 44": 32, "45 a 59": 41, "60 anos ou mais": 35, "Sem instru\u00e7\u00e3o e fundamental incompleto": 49, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 56, "Superior completo": 31, "r_masc": 2.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 2.0, "r_45_59": 0.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 1.0, "r_sup": 2.0, "total_realizado": 3.0}, {"UF": "RJ", "MASCULINO": 74, "FEMININO": 87, "18 a 24": 20, "25 a 34": 30, "35 a 44": 32, "45 a 59": 41, "60 anos ou mais": 39, "Sem instru\u00e7\u00e3o e fundamental incompleto": 41, "Fundamental completo e m\u00e9dio incompleto": 27, "M\u00e9dio completo e superior incompleto": 64, "Superior completo": 29, "r_masc": 0.0, "r_fem": 2.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 2.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 2.0, "total_realizado": 2.0}, {"UF": "RN", "MASCULINO": 77, "FEMININO": 84, "18 a 24": 23, "25 a 34": 33, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 32, "Sem instru\u00e7\u00e3o e fundamental incompleto": 63, "Fundamental completo e m\u00e9dio incompleto": 25, "M\u00e9dio completo e superior incompleto": 52, "Superior completo": 22, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "RO", "MASCULINO": 80, "FEMININO": 81, "18 a 24": 24, "25 a 34": 35, "35 a 44": 35, "45 a 59": 40, "60 anos ou mais": 27, "Sem instru\u00e7\u00e3o e fundamental incompleto": 64, "Fundamental completo e m\u00e9dio incompleto": 26, "M\u00e9dio completo e superior incompleto": 48, "Superior completo": 23, "r_masc": 0.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "RR", "MASCULINO": 80, "FEMININO": 81, "18 a 24": 32, "25 a 34": 41, "35 a 44": 36, "45 a 59": 33, "60 anos ou mais": 19, "Sem instru\u00e7\u00e3o e fundamental incompleto": 45, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 65, "Superior completo": 26, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "RS", "MASCULINO": 77, "FEMININO": 84, "18 a 24": 19, "25 a 34": 30, "35 a 44": 31, "45 a 59": 40, "60 anos ou mais": 41, "Sem instru\u00e7\u00e3o e fundamental incompleto": 52, "Fundamental completo e m\u00e9dio incompleto": 28, "M\u00e9dio completo e superior incompleto": 54, "Superior completo": 28, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "SC", "MASCULINO": 78, "FEMININO": 83, "18 a 24": 21, "25 a 34": 34, "35 a 44": 34, "45 a 59": 39, "60 anos ou mais": 32, "Sem instru\u00e7\u00e3o e fundamental incompleto": 44, "Fundamental completo e m\u00e9dio incompleto": 27, "M\u00e9dio completo e superior incompleto": 58, "Superior completo": 32, "r_masc": 0.0, "r_fem": 1.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 1.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 1.0, "total_realizado": 1.0}, {"UF": "SE", "MASCULINO": 75, "FEMININO": 86, "18 a 24": 24, "25 a 34": 34, "35 a 44": 35, "45 a 59": 39, "60 anos ou mais": 29, "Sem instru\u00e7\u00e3o e fundamental incompleto": 65, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 51, "Superior completo": 22, "r_masc": 2.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 1.0, "r_60_mais": 1.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 1.0, "r_sup": 1.0, "total_realizado": 2.0}, {"UF": "SP", "MASCULINO": 76, "FEMININO": 85, "18 a 24": 20, "25 a 34": 31, "35 a 44": 34, "45 a 59": 40, "60 anos ou mais": 35, "Sem instru\u00e7\u00e3o e fundamental incompleto": 39, "Fundamental completo e m\u00e9dio incompleto": 24, "M\u00e9dio completo e superior incompleto": 63, "Superior completo": 35, "r_masc": 3.0, "r_fem": 1.0, "r_18_24": 1.0, "r_25_34": 1.0, "r_35_44": 0.0, "r_45_59": 2.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 1.0, "r_sup": 3.0, "total_realizado": 4.0}, {"UF": "TO", "MASCULINO": 80, "FEMININO": 81, "18 a 24": 26, "25 a 34": 35, "35 a 44": 35, "45 a 59": 38, "60 anos ou mais": 28, "Sem instru\u00e7\u00e3o e fundamental incompleto": 53, "Fundamental completo e m\u00e9dio incompleto": 23, "M\u00e9dio completo e superior incompleto": 59, "Superior completo": 26, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}, {"UF": "TOTAL", "MASCULINO": 2093, "FEMININO": 2254, "18 a 24": 656, "25 a 34": 919, "35 a 44": 926, "45 a 59": 1034, "60 anos ou mais": 810, "Sem instru\u00e7\u00e3o e fundamental incompleto": 1489, "Fundamental completo e m\u00e9dio incompleto": 674, "M\u00e9dio completo e superior incompleto": 1503, "Superior completo": 686, "r_masc": 0.0, "r_fem": 0.0, "r_18_24": 0.0, "r_25_34": 0.0, "r_35_44": 0.0, "r_45_59": 0.0, "r_60_mais": 0.0, "r_fund1": 0.0, "r_fund2": 0.0, "r_medio": 0.0, "r_sup": 0.0, "total_realizado": 0.0}];
+
+    let currentCenario = 'c1';
+    let modoFarolImagem = false;
+
+    function atualizarCards() {
+        const totSenaiUnivG = dataSenai.reduce((a, b) => a + b.UNIVERSO_SATISFAÇÃO, 0);
+        const totSenaiRealG = dataSenai.reduce((a, b) => a + b.realizado_geral, 0);
+        const totSenaiMetaG = dataSenai.reduce((a, b) => a + b['meta_' + currentCenario + '_geral'], 0);
+        const pctSenaiG = totSenaiMetaG > 0 ? (totSenaiRealG / totSenaiMetaG) * 100 : 0;
+        document.getElementById('cardSenaiGeralVal').innerText = `${totSenaiRealG} / ${totSenaiMetaG}`;
+        document.getElementById('cardSenaiGeralSub').innerText = `Universo: ${totSenaiUnivG.toLocaleString('pt-BR')}`;
+        const p1 = document.getElementById('cardSenaiGeralProg');
+        p1.style.width = `${Math.min(pctSenaiG, 100)}%`; p1.innerText = `${pctSenaiG.toFixed(1)}%`;
+
+        const totSenaiUnivAd = dataSenai.reduce((a, b) => a + b.UNIVERSO_ADERÊNCIA, 0);
+        const totSenaiRealAd = dataSenai.reduce((a, b) => a + b.realizado_aderencia, 0);
+        const totSenaiMetaAd = dataSenai.reduce((a, b) => a + b['meta_' + currentCenario + '_ad'], 0);
+        const pctSenaiAd = totSenaiMetaAd > 0 ? (totSenaiRealAd / totSenaiMetaAd) * 100 : 0;
+        document.getElementById('cardSenaiAdVal').innerText = `${totSenaiRealAd} / ${totSenaiMetaAd}`;
+        document.getElementById('cardSenaiAdSub').innerText = `Universo: ${totSenaiUnivAd.toLocaleString('pt-BR')}`;
+        const p2 = document.getElementById('cardSenaiAdProg');
+        p2.style.width = `${Math.min(pctSenaiAd, 100)}%`; p2.innerText = `${pctSenaiAd.toFixed(1)}%`;
+
+        const totSesiUniv = dataSesi.reduce((a, b) => a + b.UNIVERSO, 0);
+        const totSesiReal = dataSesi.reduce((a, b) => a + b.realizado_geral, 0);
+        const totSesiMeta = dataSesi.reduce((a, b) => a + b['meta_' + currentCenario + '_geral'], 0);
+        const pctSesi = totSesiMeta > 0 ? (totSesiReal / totSesiMeta) * 100 : 0;
+        document.getElementById('cardSesiGeralVal').innerText = `${totSesiReal} / ${totSesiMeta}`;
+        document.getElementById('cardSesiGeralSub').innerText = `Universo: ${totSesiUniv.toLocaleString('pt-BR')}`;
+        const p3 = document.getElementById('cardSesiGeralProg');
+        p3.style.width = `${Math.min(pctSesi, 100)}%`; p3.innerText = `${pctSesi.toFixed(1)}%`;
+
+        const totImgReal = dataImagem.reduce((a, b) => a + b.total_realizado, 0);
+        document.getElementById('cardImagemVal').innerText = totImgReal;
+    }
+
+    function renderTableSenai(data) {
+        const tbody = document.getElementById('tbodySenai');
+        const tfoot = document.getElementById('tfootSenai');
+        tbody.innerHTML = '';
+        let sumUG = 0, sumRG = 0, sumMG = 0, sumUA = 0, sumRA = 0, sumMA = 0;
+
+        data.forEach(row => {
+            const mg = row['meta_' + currentCenario + '_geral'];
+            const ma = row['meta_' + currentCenario + '_ad'];
+            const pg = mg > 0 ? (row.realizado_geral / mg) * 100 : 0;
+            const pa = ma > 0 ? (row.realizado_aderencia / ma) * 100 : 0;
+
+            sumUG += row.UNIVERSO_SATISFAÇÃO; sumRG += row.realizado_geral; sumMG += mg;
+            sumUA += row.UNIVERSO_ADERÊNCIA; sumRA += row.realizado_aderencia; sumMA += ma;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><strong>${row.DR}</strong></td><td>${row.UNIVERSO_SATISFAÇÃO}</td><td><strong>${mg}</strong></td><td><span class="badge bg-primary fs-6">${row.realizado_geral}</span></td><td>${pg.toFixed(1)}%<div class="progress"><div class="progress-bar bg-primary" style="width: ${Math.min(pg, 100)}%"></div></div></td><td>${row.UNIVERSO_ADERÊNCIA}</td><td><strong>${ma}</strong></td><td><span class="badge bg-info text-dark fs-6">${row.realizado_aderencia}</span></td><td>${pa.toFixed(1)}%<div class="progress"><div class="progress-bar bg-info" style="width: ${Math.min(pa, 100)}%"></div></div></td>`;
+            tbody.appendChild(tr);
+        });
+        tfoot.innerHTML = `<tr class="tr-total"><td>TOTAL GERAL</td><td>${sumUG}</td><td>${sumMG}</td><td>${sumRG}</td><td>${(sumMG > 0 ? (sumRG/sumMG)*100 : 0).toFixed(1)}%</td><td>${sumUA}</td><td>${sumMA}</td><td>${sumRA}</td><td>${(sumMA > 0 ? (sumRA/sumMA)*100 : 0).toFixed(1)}%</td></tr>`;
+    }
+
+    function renderTableSesi(data) {
+        const tbody = document.getElementById('tbodySesi');
+        const tfoot = document.getElementById('tfootSesi');
+        tbody.innerHTML = '';
+        let sumU = 0, sumR = 0, sumM = 0;
+
+        data.forEach(row => {
+            const mg = row['meta_' + currentCenario + '_geral'];
+            const pg = mg > 0 ? (row.realizado_geral / mg) * 100 : 0;
+            sumU += row.UNIVERSO; sumR += row.realizado_geral; sumM += mg;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><strong>${row.DR}</strong></td><td>${row.UNIVERSO}</td><td><strong>${mg}</strong></td><td><span class="badge bg-success fs-6">${row.realizado_geral}</span></td><td>${pg.toFixed(1)}%<div class="progress"><div class="progress-bar bg-success" style="width: ${Math.min(pg, 100)}%"></div></div></td>`;
+            tbody.appendChild(tr);
+        });
+        tfoot.innerHTML = `<tr class="tr-total"><td>TOTAL GERAL</td><td>${sumU}</td><td>${sumM}</td><td>${sumR}</td><td>${(sumM > 0 ? (sumR/sumM)*100 : 0).toFixed(1)}%</td></tr>`;
+    }
+
+    // Farol gradativo contínuo (0% Vermelho -> 50% Amarelo -> 100% Verde)
+    function formatCelulaImagem(realizado, alvo) {
+        if (!modoFarolImagem) {
+            return `<span class="text-primary fw-bold">${realizado}</span> / ${alvo}`;
+        }
+        const pct = alvo > 0 ? (realizado / alvo) * 100 : 0;
+        const pClamped = Math.min(Math.max(pct, 0), 100);
+        
+        let r, g, b = 0;
+        if (pClamped <= 50) {
+            const t = pClamped / 50;
+            r = Math.round(220 + t * (255 - 220));
+            g = Math.round(53 + t * (193 - 53));
+        } else {
+            const t = (pClamped - 50) / 50;
+            r = Math.round(255 + t * (25 - 255));
+            g = Math.round(193 + t * (135 - 193));
+            b = Math.round(0 + t * (84 - 0));
+        }
+        const corTexto = (pClamped >= 25 && pClamped <= 75) ? '#212529' : '#ffffff';
+        return `<span style="background-color: rgb(${r},${g},${b}); color: ${corTexto}; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block;">${pct.toFixed(0)}%</span>`;
+    }
+
+    function renderTableImagem(data) {
+        const tbody = document.getElementById('tbodyImagem');
+        const tfoot = document.getElementById('tfootImagem');
+        tbody.innerHTML = '';
+
+        let tMascA = 0, tMascR = 0, tFemA = 0, tFemR = 0;
+        let t18_24A = 0, t18_24R = 0, t25_34A = 0, t25_34R = 0, t35_44A = 0, t35_44R = 0, t45_59A = 0, t45_59R = 0, t60A = 0, t60R = 0;
+        let tF1A = 0, tF1R = 0, tF2A = 0, tF2R = 0, tMedA = 0, tMedR = 0, tSupA = 0, tSupR = 0;
+        let totalTotR = 0;
+
+        data.forEach(r => {
+            tMascA += r.MASCULINO; tMascR += r.r_masc;
+            tFemA += r.FEMININO; tFemR += r.r_fem;
+
+            t18_24A += r['18 a 24']; t18_24R += r.r_18_24;
+            t25_34A += r['25 a 34']; t25_34R += r.r_25_34;
+            t35_44A += r['35 a 44']; t35_44R += r.r_35_44;
+            t45_59A += r['45 a 59']; t45_59R += r.r_45_59;
+            t60A += r['60 anos ou mais']; t60R += r.r_60_mais;
+
+            tF1A += r['Sem instrução e fundamental incompleto']; tF1R += r.r_fund1;
+            tF2A += r['Fundamental completo e médio incompleto']; tF2R += r.r_fund2;
+            tMedA += r['Médio completo e superior incompleto']; tMedR += r.r_medio;
+            tSupA += r['Superior completo']; tSupR += r.r_sup;
+            totalTotR += r.total_realizado;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${r.UF}</strong></td>
+                <td>${formatCelulaImagem(r.r_masc, r.MASCULINO)}</td>
+                <td>${formatCelulaImagem(r.r_fem, r.FEMININO)}</td>
+                <td>${formatCelulaImagem(r.r_18_24, r['18 a 24'])}</td>
+                <td>${formatCelulaImagem(r.r_25_34, r['25 a 34'])}</td>
+                <td>${formatCelulaImagem(r.r_35_44, r['35 a 44'])}</td>
+                <td>${formatCelulaImagem(r.r_45_59, r['45 a 59'])}</td>
+                <td>${formatCelulaImagem(r.r_60_mais, r['60 anos ou mais'])}</td>
+                <td>${formatCelulaImagem(r.r_fund1, r['Sem instrução e fundamental incompleto'])}</td>
+                <td>${formatCelulaImagem(r.r_fund2, r['Fundamental completo e médio incompleto'])}</td>
+                <td>${formatCelulaImagem(r.r_medio, r['Médio completo e superior incompleto'])}</td>
+                <td>${formatCelulaImagem(r.r_sup, r['Superior completo'])}</td>
+                <td><span class="badge bg-dark fs-6">${r.total_realizado}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        tfoot.innerHTML = `
+            <tr class="tr-total">
+                <td>TOTAL GERAL</td>
+                <td>${formatCelulaImagem(tMascR, tMascA)}</td>
+                <td>${formatCelulaImagem(tFemR, tFemA)}</td>
+                <td>${formatCelulaImagem(t18_24R, t18_24A)}</td>
+                <td>${formatCelulaImagem(t25_34R, t25_34A)}</td>
+                <td>${formatCelulaImagem(t35_44R, t35_44A)}</td>
+                <td>${formatCelulaImagem(t45_59R, t45_59A)}</td>
+                <td>${formatCelulaImagem(t60R, t60A)}</td>
+                <td>${formatCelulaImagem(tF1R, tF1A)}</td>
+                <td>${formatCelulaImagem(tF2R, tF2A)}</td>
+                <td>${formatCelulaImagem(tMedR, tMedA)}</td>
+                <td>${formatCelulaImagem(tSupR, tSupA)}</td>
+                <td><span class="badge bg-dark fs-6">${totalTotR}</span></td>
+            </tr>
+        `;
+    }
+
+    function updateAll() {
+        atualizarCards();
+        renderTableSenai(dataSenai);
+        renderTableSesi(dataSesi);
+        renderTableImagem(dataImagem);
+    }
+
+    updateAll();
+
+    document.getElementById('selectCenario').addEventListener('change', (e) => {
+        currentCenario = e.target.value;
+        updateAll();
+    });
+
+    const btnToggle = document.getElementById('btnToggleVisImagem');
+    if(btnToggle) {
+        btnToggle.addEventListener('click', () => {
+            modoFarolImagem = !modoFarolImagem;
+            btnToggle.innerText = modoFarolImagem ? '🔄 Alternar Modo: Valores (Real/Alvo)' : '🔄 Alternar Modo: % Farol Gradativo';
+            renderTableImagem(dataImagem);
+        });
+    }
+
+    // Gráficos de Barras DR SENAI e SESI
+    new Chart(document.getElementById('chartSenaiDR'), {
+        type: 'bar',
+        data: {
+            labels: dataSenai.map(r => r.DR),
+            datasets: [
+                { label: 'Realizado Geral', data: dataSenai.map(r => r.realizado_geral), backgroundColor: '#0d6efd' },
+                { label: 'Realizado Aderência (EP)', data: dataSenai.map(r => r.realizado_aderencia), backgroundColor: '#0dcaf0' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    new Chart(document.getElementById('chartSesiDR'), {
+        type: 'bar',
+        data: {
+            labels: dataSesi.map(r => r.DR),
+            datasets: [{ label: 'Realizado Geral', data: dataSesi.map(r => r.realizado_geral), backgroundColor: '#198754' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    
+        const monitData = {
+            senai: {"evolucao": {"21/09/2026": 1, "22/09/2026": 16, "23/09/2026": 17, "24/09/2026": 15, "25/09/2026": 7, "28/09/2026": 13, "29/09/2026": 13, "30/09/2026": 8, "01/10/2026": 9, "02/10/2026": 11, "06/10/2026": 17, "07/10/2026": 20, "08/10/2026": 17, "09/10/2026": 9, "13/10/2026": 25, "14/10/2026": 23, "15/10/2026": 12, "16/10/2026": 13, "19/10/2026": 12, "20/10/2026": 16, "21/10/2026": 15, "22/10/2026": 9, "23/10/2026": 9, "26/10/2026": 1}, "pesquisadores": [{"pesquisador": "Micheline", "total": 96, "pct": 31.2}, {"pesquisador": "Saulo", "total": 59, "pct": 19.2}, {"pesquisador": "Monique", "total": 44, "pct": 14.3}, {"pesquisador": "Emanuel", "total": 42, "pct": 13.6}, {"pesquisador": "Genilza", "total": 35, "pct": 11.4}, {"pesquisador": "Breno", "total": 32, "pct": 10.4}], "media_diaria": 12.8},
+            sesi: {"evolucao": {"07/10/2026": 9, "08/10/2026": 11, "09/10/2026": 13, "13/10/2026": 15, "14/10/2026": 24, "15/10/2026": 10, "16/10/2026": 7, "19/10/2026": 10, "20/10/2026": 14, "21/10/2026": 9, "22/10/2026": 7, "23/10/2026": 4, "26/10/2026": 3, "27/10/2026": 6}, "pesquisadores": [{"pesquisador": "Bruno", "total": 48, "pct": 33.8}, {"pesquisador": "Darmiton", "total": 32, "pct": 22.5}, {"pesquisador": "Larissa", "total": 24, "pct": 16.9}, {"pesquisador": "Clara Moraes", "total": 23, "pct": 16.2}, {"pesquisador": "Katarina", "total": 15, "pct": 10.6}], "media_diaria": 10.1},
+            imagem: {"evolucao": {"13/10/2026": 2, "14/10/2026": 10, "15/10/2026": 6, "16/10/2026": 4, "19/10/2026": 2, "20/10/2026": 2, "21/10/2026": 3, "22/10/2026": 2, "27/10/2026": 1}, "pesquisadores": [{"pesquisador": "Ana Elisabete", "total": 13, "pct": 40.6}, {"pesquisador": "Renata", "total": 7, "pct": 21.9}, {"pesquisador": "Gleiciene", "total": 5, "pct": 15.6}, {"pesquisador": "Alice", "total": 4, "pct": 12.5}, {"pesquisador": "Ivanildo", "total": 3, "pct": 9.4}], "media_diaria": 3.6}
+        };
+        let currentPesquisaMonit = 'senai';
+        let chartEvolMonitInstance = null;
+        let chartPesqMonitInstance = null;
+
+        function renderMonitoramento(tipo) {
+            const target = monitData[tipo];
+            document.getElementById('cardMediaDia').innerText = target.media_diaria;
+            
+            const tbody = document.getElementById('tbodyMonitPesquisadores');
+            tbody.innerHTML = '';
+            if(target.pesquisadores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum dado de pesquisador encontrado.</td></tr>';
+            } else {
+                target.pesquisadores.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><strong>${p.pesquisador}</strong></td><td><span class="badge bg-secondary fs-6">${p.total}</span></td><td style="width: 200px;">${p.pct}%<div class="progress"><div class="progress-bar bg-dark" style="width: ${Math.min(p.pct, 100)}%"></div></div></td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            const dates = Object.keys(target.evolucao);
+            const counts = Object.values(target.evolucao);
+
+            if(chartEvolMonitInstance) chartEvolMonitInstance.destroy();
+            chartEvolMonitInstance = new Chart(document.getElementById('chartEvolucaoMonit'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{ label: 'Entrevistas / Dia', data: counts, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', fill: true, tension: 0.3 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const pesqNames = target.pesquisadores.slice(0, 10).map(p => p.pesquisador);
+            const pesqTotals = target.pesquisadores.slice(0, 10).map(p => p.total);
+
+            if(chartPesqMonitInstance) chartPesqMonitInstance.destroy();
+            chartPesqMonitInstance = new Chart(document.getElementById('chartPesquisadoresMonit'), {
+                type: 'bar',
+                data: {
+                    labels: pesqNames,
+                    datasets: [{ label: 'Pesquisas Concluídas', data: pesqTotals, backgroundColor: '#0dcaf0' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+            });
+        }
+
+        const selMonit = document.getElementById('selectPesquisaMonit');
+        if(selMonit) {
+            selMonit.addEventListener('change', (e) => {
+                currentPesquisaMonit = e.target.value;
+                renderMonitoramento(currentPesquisaMonit);
+            });
+            renderMonitoramento('senai');
+        }
+        
+</script>
+</body>
+</html>
